@@ -37,6 +37,13 @@ module.exports = ({ config }) => {
     plugins: [
       ...(base.plugins ?? []),
       [
+        'react-native-maps',
+        {
+          androidGoogleMapsApiKey: googleMapsApiKey,
+          iosGoogleMapsApiKey: googleMapsApiKey,
+        },
+      ],
+      [
         'expo-image-picker',
         {
           photosPermission: 'Allow BoltRide to access your photos for your profile picture.',

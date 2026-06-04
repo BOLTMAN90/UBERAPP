@@ -1,3 +1,5 @@
+import Constants from 'expo-constants';
+
 import { sanitizeEnvValue } from '@/utils/env';
 
 const placeholderFirebaseConfig = {
@@ -45,9 +47,20 @@ export const firebaseConfig = useFirebaseEmulators
 
 /** Google Maps API key used by react-native-maps (Android/iOS). */
 export const googleMapsApiKey =
-  sanitizeEnvValue(process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY) || 'YOUR_GOOGLE_MAPS_API_KEY';
+  sanitizeEnvValue(process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY) ||
+  sanitizeEnvValue(Constants.expoConfig?.extra?.googleMapsApiKey) ||
+  sanitizeEnvValue(Constants.expoConfig?.android?.config?.googleMaps?.apiKey) ||
+  'YOUR_GOOGLE_MAPS_API_KEY';
 
 export const hasGoogleMapsApiKey = !googleMapsApiKey.includes('YOUR_');
+
+/**
+ * Native Google Maps tiles on release APK (react-native-maps + PROVIDER_GOOGLE).
+ * Requires Maps SDK for Android + EAS keystore SHA-1 on your API key (see docs/GOOGLE_MAPS_APK.md).
+ * Until then, the app uses OpenStreetMap (same as Expo Go) so the map is not blank.
+ */
+export const useGoogleMapsNative =
+  sanitizeEnvValue(process.env.EXPO_PUBLIC_USE_GOOGLE_MAPS_NATIVE) === 'true';
 
 /** Simple fare model for the learning MVP. */
 export const FARE = {

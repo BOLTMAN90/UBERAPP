@@ -17,7 +17,10 @@
       "bundleIdentifier": "com.student.rideyellow",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "BoltRide uses your location to show pickup points and match nearby drivers.",
-        "UIBackgroundModes": ["location", "remote-notification"]
+        "UIBackgroundModes": [
+          "location",
+          "remote-notification"
+        ]
       },
       "config": {
         "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY"
@@ -34,7 +37,6 @@
         "ACCESS_FINE_LOCATION",
         "POST_NOTIFICATIONS"
       ],
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "config": {
         "googleMaps": {
@@ -65,6 +67,14 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY",
+      "router": {},
+      "eas": {
+        "projectId": "2a118d94-c801-479b-b4ee-b987b6b9f6b6"
+      }
+    },
+    "owner": "bolex"
   }
 }

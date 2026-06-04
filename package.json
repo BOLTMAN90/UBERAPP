@@ -22,14 +22,15 @@
     "dev:emulators:app": "wait-on tcp:127.0.0.1:9099 tcp:127.0.0.1:8080 && node scripts/seed-emulators.mjs && node scripts/start-expo-emulator-mode.mjs",
     "emulators": "node scripts/start-emulators.mjs",
     "seed": "node scripts/seed-emulators.mjs",
-    "android": "expo start --android",
-    "ios": "expo start --ios"
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "maps:setup": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/maps-setup.ps1"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/native": "^7.1.8",
-    "expo": "~55.0.25",
+    "expo": "~55.0.26",
     "expo-constants": "~55.0.16",
     "expo-device": "~55.0.17",
     "expo-font": "~55.0.8",
@@ -37,7 +38,7 @@
     "expo-linking": "~55.0.15",
     "expo-location": "~55.1.10",
     "expo-notifications": "~55.0.23",
-    "expo-router": "~55.0.15",
+    "expo-router": "~55.0.16",
     "expo-splash-screen": "~55.0.21",
     "expo-status-bar": "~55.0.6",
     "expo-web-browser": "~55.0.16",

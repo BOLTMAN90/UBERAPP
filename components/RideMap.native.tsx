@@ -2,10 +2,9 @@ import { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 
-import { MapFallback } from '@/components/MapFallback';
 import { OpenStreetMapView } from '@/components/OpenStreetMapView';
 import type { MapRegion, RideMapProps } from '@/components/rideMapTypes';
-import { hasGoogleMapsApiKey } from '@/constants/config';
+import { hasGoogleMapsApiKey, useGoogleMapsNative } from '@/constants/config';
 import { Colors } from '@/constants/theme';
 import type { GeoPoint } from '@/types';
 import { isExpoGo } from '@/utils/expoRuntime';
@@ -68,16 +67,11 @@ function NativeMap({
 }
 
 export function RideMap(props: RideMapProps) {
-  if (!hasGoogleMapsApiKey) {
-    return (
-      <View style={styles.mapShell}>
-        <OpenStreetMapView {...props} />
-      </View>
-    );
-  }
+  // OpenStreetMap: works in Expo Go and release APK without Google Cloud SHA-1 setup.
+  const useOsm =
+    !hasGoogleMapsApiKey || isExpoGo || !useGoogleMapsNative;
 
-  // Expo Go: OpenStreetMap in WebView (works without native Google Maps SDK key).
-  if (isExpoGo) {
+  if (useOsm) {
     return (
       <View style={styles.mapShell}>
         <OpenStreetMapView {...props} />
