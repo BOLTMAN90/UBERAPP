@@ -1,6 +1,6 @@
 import { router, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { PremiumVehicleSelector } from '@/components/PremiumVehicleSelector';
@@ -14,11 +14,12 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useCurrentLocation } from '@/hooks/useCurrentLocation';
 import { createRideRequest } from '@/services/rides';
-import type { GeoPoint, PaymentMethod, RideCategory, RideLocation } from '@/types';
+import type { CurrencyCode, GeoPoint, PaymentMethod, RideCategory, RideLocation } from '@/types';
 import { estimateFare, getRouteDistanceKm } from '@/utils/geo';
 
 export default function BookRideScreen() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const currency = (profile?.preferredCurrency ?? 'USD') as CurrencyCode;
   const { colors } = useTheme();
   const { location } = useCurrentLocation();
   const [category, setCategory] = useState<RideCategory>('economy');
@@ -74,6 +75,7 @@ export default function BookRideScreen() {
         {
           category,
           paymentMethod,
+          currency,
           stops,
           isNegotiable: negotiable,
           offeredFare: negotiable ? Number(offeredFare) || fare : undefined,
@@ -82,7 +84,14 @@ export default function BookRideScreen() {
       );
       router.replace('/(rider)' as Href);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Booking failed.');
+      const message = e instanceof Error ? e.message : 'Booking failed.';
+      setError(message);
+      if (message.toLowerCase().includes('insufficient wallet')) {
+        Alert.alert('Insufficient funds', message, [
+          { text: 'Top up wallet', onPress: () => router.push('/(rider)/wallet' as Href) },
+          { text: 'OK', style: 'cancel' },
+        ]);
+      }
     } finally {
       setLoading(false);
     }

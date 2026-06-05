@@ -138,7 +138,14 @@ export default function RiderHomeScreen() {
       });
       router.push('/(rider)/history' as Href);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Request failed.');
+      const message = e instanceof Error ? e.message : 'Request failed.';
+      setError(message);
+      if (message.toLowerCase().includes('insufficient wallet')) {
+        Alert.alert('Insufficient funds', message, [
+          { text: 'Top up wallet', onPress: () => router.push('/(rider)/wallet' as Href) },
+          { text: 'OK', style: 'cancel' },
+        ]);
+      }
     } finally {
       setRequesting(false);
     }

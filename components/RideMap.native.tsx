@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 
@@ -10,6 +10,8 @@ import type { GeoPoint } from '@/types';
 import { isExpoGo } from '@/utils/expoRuntime';
 
 export type { MapRegion, RideMapProps } from '@/components/rideMapTypes';
+
+const MAP_READY_TIMEOUT_MS = 6000;
 
 const defaultRegion: MapRegion = {
   latitude: 6.5244,
@@ -24,8 +26,8 @@ function NativeMap({
   pickup,
   destination,
   onRegionChange,
-  useGoogleProvider,
-}: RideMapProps & { useGoogleProvider: boolean }) {
+  onMapReady,
+}: RideMapProps & { onMapReady: () => void }) {
   const mapRef = useRef<MapView>(null);
 
   useEffect(() => {
@@ -45,8 +47,8 @@ function NativeMap({
   return (
     <MapView
       ref={mapRef}
-      style={StyleSheet.absoluteFill}
-      provider={useGoogleProvider ? PROVIDER_GOOGLE : undefined}
+      style={styles.mapFill}
+      provider={PROVIDER_GOOGLE}
       mapType="standard"
       initialRegion={
         userLocation
@@ -55,6 +57,7 @@ function NativeMap({
       }
       showsUserLocation
       showsMyLocationButton={false}
+      onMapReady={onMapReady}
       onRegionChangeComplete={onRegionChange}>
       {pickup ? <Marker coordinate={pickup} title="Pickup" pinColor={Colors.primary} /> : null}
       {destination ? <Marker coordinate={destination} title="Destination" pinColor={Colors.black} /> : null}
@@ -66,22 +69,40 @@ function NativeMap({
   );
 }
 
-export function RideMap(props: RideMapProps) {
-  // OpenStreetMap: works in Expo Go and release APK without Google Cloud SHA-1 setup.
-  const useOsm =
-    !hasGoogleMapsApiKey || isExpoGo || !useGoogleMapsNative;
+/** Tries Google Maps; falls back to OpenStreetMap if tiles never load (common when SHA-1 is missing). */
+function NativeMapWithFallback(props: RideMapProps) {
+  const [googleReady, setGoogleReady] = useState(false);
+  const [useFallback, setUseFallback] = useState(false);
 
-  if (useOsm) {
-    return (
-      <View style={styles.mapShell}>
-        <OpenStreetMapView {...props} />
-      </View>
-    );
+  useEffect(() => {
+    if (googleReady) return;
+    const timer = setTimeout(() => setUseFallback(true), MAP_READY_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [googleReady]);
+
+  if (useFallback) {
+    return <OpenStreetMapView {...props} />;
   }
 
   return (
+    <NativeMap
+      {...props}
+      onMapReady={() => setGoogleReady(true)}
+    />
+  );
+}
+
+export function RideMap(props: RideMapProps) {
+  const wantsGoogleNative =
+    hasGoogleMapsApiKey && !isExpoGo && useGoogleMapsNative;
+
+  return (
     <View style={styles.mapShell}>
-      <NativeMap {...props} useGoogleProvider />
+      {wantsGoogleNative ? (
+        <NativeMapWithFallback {...props} />
+      ) : (
+        <OpenStreetMapView {...props} />
+      )}
     </View>
   );
 }
@@ -90,6 +111,10 @@ const styles = StyleSheet.create({
   mapShell: {
     flex: 1,
     minHeight: 300,
-    backgroundColor: Colors.secondary,
+    backgroundColor: '#e8ecf0',
+  },
+  mapFill: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#e8ecf0',
   },
 });

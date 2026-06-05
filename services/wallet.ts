@@ -11,10 +11,10 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 
-import { DEFAULT_CURRENCY } from '@/constants/currencies';
+import { CURRENCIES, DEFAULT_CURRENCY } from '@/constants/currencies';
 import { db } from '@/services/firebase';
 import type { CurrencyCode, PaymentMethod, WalletBalances, WalletTransaction } from '@/types';
-import { createEmptyBalances, normalizeBalances } from '@/utils/currency';
+import { convertCurrency, createEmptyBalances, normalizeBalances } from '@/utils/currency';
 import { isFirebasePermissionError } from '@/utils/firebaseErrors';
 import { runFirestoreWithRetry } from '@/utils/firestoreRetry';
 
@@ -64,6 +64,15 @@ export async function getWalletBalance(userId: string, currency?: CurrencyCode):
   return balances[code] ?? 0;
 }
 
+export async function hasSufficientWalletBalance(
+  userId: string,
+  amount: number,
+  currency: CurrencyCode,
+): Promise<boolean> {
+  const balance = await getWalletBalance(userId, currency);
+  return balance >= amount;
+}
+
 export async function topUpWallet(
   userId: string,
   amount: number,
@@ -76,7 +85,11 @@ export async function topUpWallet(
 
   await runFirestoreWithRetry(async () => {
     const { balances } = await readUserWallet(userId);
-    const next = { ...balances, [currency]: (balances[currency] ?? 0) + amount };
+    const next = { ...balances };
+    for (const c of CURRENCIES) {
+      const equivalent = convertCurrency(amount, currency, c.code);
+      next[c.code] = Math.round(((next[c.code] ?? 0) + equivalent) * 100) / 100;
+    }
     const userRef = doc(db, 'users', userId);
     const txnRef = doc(collection(db, 'walletTransactions'));
 
@@ -96,6 +109,7 @@ export async function topUpWallet(
       amount,
       currency,
       method,
+      creditedAllCurrencies: true,
       createdAt: serverTimestamp(),
     });
     await batch.commit();

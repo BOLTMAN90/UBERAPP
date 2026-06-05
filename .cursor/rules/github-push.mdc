@@ -1,0 +1,36 @@
+---
+description: Push UBERAPP commits to the owner's GitHub repo (BOLTMAN90/UBERAPP)
+alwaysApply: true
+---
+
+# GitHub push for UBERAPP
+
+When the user asks to push this project to GitHub (or similar: "push to github", "upload to repo"), use **this repository only**:
+
+| Setting | Value |
+|---------|--------|
+| Remote | `origin` |
+| URL | `https://github.com/BOLTMAN90/UBERAPP.git` |
+| Default branch | `main` |
+
+## Workflow
+
+1. Run `git status`, `git diff`, and `git log -3` before committing.
+2. **Never commit** `.env`, `cursor/.env`, or other secrets (see `.gitignore`).
+3. Commit only when the user explicitly requests a push or commit.
+4. Push with: `git push origin main` (or `git push -u origin HEAD` if tracking is missing).
+5. If push fails for auth, tell the user to run `git push origin main` in their terminal and sign in to GitHub.
+
+## Do not
+
+- Change `git config` (global or local) unless the user explicitly asks.
+- Force-push to `main` unless the user explicitly requests it.
+- Push to a different remote or repo without the user saying so.
+
+## Verify remote
+
+If `origin` is wrong, fix with:
+
+```bash
+git remote set-url origin https://github.com/BOLTMAN90/UBERAPP.git
+```

@@ -5,6 +5,9 @@ import { Button } from '@/components/Button';
 import { CurrencyPicker } from '@/components/CurrencyPicker';
 import { InputField } from '@/components/InputField';
 import { PaymentPicker } from '@/components/PaymentPicker';
+import { FundingFlowModal } from '@/components/wallet/FundingFlowModal';
+import { TOP_UP_EXCLUDED_METHODS } from '@/constants/walletFunding';
+import { CURRENCIES } from '@/constants/currencies';
 import { Radius, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -28,6 +31,7 @@ export default function WalletScreen() {
   const [method, setMethod] = useState<PaymentMethod>('card');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fundingOpen, setFundingOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -56,21 +60,22 @@ export default function WalletScreen() {
     }
   };
 
-  const handleTopUp = async () => {
-    if (!user) return;
+  const openFundingFlow = () => {
     const value = Number(amount);
     if (!value || value <= 0) {
       Alert.alert('Invalid amount', 'Enter a valid amount to add.');
       return;
     }
+    setFundingOpen(true);
+  };
+
+  const completeFunding = async () => {
+    if (!user) return;
+    const value = Number(amount);
     setLoading(true);
-    setError(null);
     try {
       await topUpWallet(user.uid, value, currency, method);
-      Alert.alert('Success', `Added ${formatMoney(value, currency)} to your wallet.`);
       await load();
-    } catch (e) {
-      setError(getFirebaseErrorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -80,29 +85,46 @@ export default function WalletScreen() {
     <ScrollView style={{ flex: 1, backgroundColor: colors.secondary }} contentContainerStyle={styles.content}>
       <Text style={[styles.title, { color: colors.text }]}>Multi-currency wallet</Text>
       <Text style={{ color: colors.textSecondary, marginBottom: Spacing.sm }}>
-        Select a currency, top up, and pay for rides in USD, NGN, EUR, GBP, KES, GHS, or ZAR.
+        Top up via card, bank transfer, mobile money, or external wallet. Cash is for paying drivers on rides only.
       </Text>
 
       <CurrencyPicker value={currency} onChange={handleCurrencyChange} balance={balance} />
 
       <View style={[styles.card, { backgroundColor: colors.surface }]}>
-        <Text style={{ color: colors.textSecondary }}>Available balance</Text>
+        <Text style={{ color: colors.textSecondary }}>Available balance ({currency})</Text>
         <Text style={[styles.balance, { color: colors.primary }]}>{formatMoney(balance, currency)}</Text>
-        <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-          ≈ {formatMoney(convertCurrency(balance, currency, 'USD'), 'USD')} in USD
+        <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: Spacing.xs }}>
+          Equivalent balances (updated together on each top-up):
         </Text>
+        {CURRENCIES.filter((c) => c.code !== currency).map((c) => (
+          <Text key={c.code} style={{ color: colors.textSecondary, fontSize: 12 }}>
+            ≈ {formatMoney(balances[c.code] ?? 0, c.code)}
+          </Text>
+        ))}
       </View>
 
-      <Text style={[styles.section, { color: colors.text }]}>Top up ({currency})</Text>
+      <Text style={[styles.section, { color: colors.text }]}>Add funds ({currency})</Text>
       <InputField
         label={`Amount (${currency})`}
         keyboardType="decimal-pad"
         value={amount}
         onChangeText={setAmount}
       />
-      <PaymentPicker value={method} onChange={setMethod} />
+      <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: Spacing.xs }}>
+        After payment, the same value is credited in all currencies (converted at live rates).
+      </Text>
+      <PaymentPicker
+        value={method}
+        onChange={setMethod}
+        exclude={[...TOP_UP_EXCLUDED_METHODS]}
+      />
       {error ? <Text style={{ color: colors.error }}>{error}</Text> : null}
-      <Button label={`Add ${currency} funds`} onPress={handleTopUp} loading={loading} />
+      <Button
+        label={`Continue to pay ${formatMoney(Number(amount) || 0, currency)}`}
+        onPress={openFundingFlow}
+        loading={loading}
+        disabled={!Number(amount) || Number(amount) <= 0}
+      />
 
       <Text style={[styles.section, { color: colors.text, marginTop: Spacing.md }]}>Transactions</Text>
       <FlatList
@@ -115,6 +137,7 @@ export default function WalletScreen() {
             <View>
               <Text style={{ color: colors.text, fontWeight: '600' }}>{item.type.replace('_', ' ')}</Text>
               <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+                {item.method ? `${item.method} · ` : ''}
                 {new Date(item.createdAt).toLocaleString()}
               </Text>
             </View>
@@ -124,6 +147,15 @@ export default function WalletScreen() {
             </Text>
           </View>
         )}
+      />
+
+      <FundingFlowModal
+        visible={fundingOpen}
+        method={method}
+        amount={Number(amount) || 0}
+        currency={currency}
+        onClose={() => setFundingOpen(false)}
+        onComplete={completeFunding}
       />
     </ScrollView>
   );

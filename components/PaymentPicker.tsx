@@ -9,14 +9,17 @@ import type { PaymentMethod } from '@/types';
 interface PaymentPickerProps {
   value: PaymentMethod;
   onChange: (method: PaymentMethod) => void;
+  /** Hide methods (e.g. cash is not used for wallet top-up). */
+  exclude?: PaymentMethod[];
 }
 
-export function PaymentPicker({ value, onChange }: PaymentPickerProps) {
+export function PaymentPicker({ value, onChange, exclude = [] }: PaymentPickerProps) {
   const { colors } = useTheme();
+  const methods = PAYMENT_METHODS.filter((m) => !exclude.includes(m.id));
 
   return (
     <View style={styles.grid}>
-      {PAYMENT_METHODS.map((method) => {
+      {methods.map((method) => {
         const active = value === method.id;
         return (
           <Pressable

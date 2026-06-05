@@ -55,12 +55,13 @@ export const googleMapsApiKey =
 export const hasGoogleMapsApiKey = !googleMapsApiKey.includes('YOUR_');
 
 /**
- * Native Google Maps tiles on release APK (react-native-maps + PROVIDER_GOOGLE).
- * Requires Maps SDK for Android + EAS keystore SHA-1 on your API key (see docs/GOOGLE_MAPS_APK.md).
- * Until then, the app uses OpenStreetMap (same as Expo Go) so the map is not blank.
+ * Native Google Maps on APK (react-native-maps). Requires Maps SDK for Android + EAS SHA-1 on API key.
+ * Also set EXPO_PUBLIC_GOOGLE_MAPS_NATIVE_VERIFIED=true after Google Cloud is configured.
+ * If Google tiles fail to load, the app auto-falls back to OpenStreetMap after a few seconds.
  */
 export const useGoogleMapsNative =
-  sanitizeEnvValue(process.env.EXPO_PUBLIC_USE_GOOGLE_MAPS_NATIVE) === 'true';
+  sanitizeEnvValue(process.env.EXPO_PUBLIC_USE_GOOGLE_MAPS_NATIVE) === 'true' &&
+  sanitizeEnvValue(process.env.EXPO_PUBLIC_GOOGLE_MAPS_NATIVE_VERIFIED) === 'true';
 
 /** Simple fare model for the learning MVP. */
 export const FARE = {

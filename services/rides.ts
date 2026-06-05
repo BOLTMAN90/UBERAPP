@@ -13,7 +13,7 @@ import {
 import { getOnlineDrivers } from '@/services/drivers';
 import { auth, db } from '@/services/firebase';
 import { safeOnSnapshotDoc, safeOnSnapshotQuery } from '@/services/firestoreListen';
-import { payFromWallet } from '@/services/wallet';
+import { hasSufficientWalletBalance, payFromWallet } from '@/services/wallet';
 import { findBestDriver, getRouteDistanceKm, estimateFare } from '@/utils/geo';
 import { generateRidePin, estimateEtaMinutes } from '@/utils/ride';
 import type {
@@ -93,6 +93,18 @@ export async function createRideRequest(
   distanceKm: number,
   options: CreateRideOptions = {},
 ): Promise<string> {
+  const currency = options.currency ?? 'USD';
+  const paymentMethod = options.paymentMethod ?? 'cash';
+
+  if (paymentMethod === 'wallet') {
+    const ok = await hasSufficientWalletBalance(userId, estimatedFare, currency);
+    if (!ok) {
+      throw new Error(
+        `Insufficient wallet funds. You need ${estimatedFare} ${currency} — top up your wallet first.`,
+      );
+    }
+  }
+
   const rideRef = await addDoc(collection(db, 'rides'), {
     userId,
     pickup,
@@ -100,8 +112,8 @@ export async function createRideRequest(
     stops: options.stops ?? [],
     status: options.isNegotiable ? 'negotiating' : 'searching',
     category: options.category ?? 'economy',
-    paymentMethod: options.paymentMethod ?? 'cash',
-    currency: options.currency ?? 'USD',
+    paymentMethod,
+    currency,
     estimatedFare,
     offeredFare: options.offeredFare ?? estimatedFare,
     distanceKm,
@@ -115,6 +127,17 @@ export async function createRideRequest(
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+
+  if (paymentMethod === 'wallet') {
+    const paid = await payFromWallet(userId, estimatedFare, currency, rideRef.id);
+    if (!paid) {
+      const { deleteDoc } = await import('firebase/firestore');
+      await deleteDoc(rideRef);
+      throw new Error(
+        `Insufficient wallet funds. You need ${estimatedFare} ${currency} — top up your wallet first.`,
+      );
+    }
+  }
 
   if (!options.isNegotiable) {
     void matchDriverToRide(rideRef.id, pickup.coordinates, options.category ?? 'economy').catch(
@@ -283,12 +306,7 @@ export async function completeRideWithPayment(
   method: PaymentMethod,
   currency: CurrencyCode = 'USD',
 ): Promise<void> {
-  if (method === 'wallet') {
-    const paid = await payFromWallet(userId, fare, currency, rideId);
-    if (!paid) {
-      throw new Error('Insufficient wallet balance for this currency.');
-    }
-  }
+  // Wallet fare is deducted at booking time in createRideRequest.
   await updateRideStatus(rideId, 'completed');
 }
 

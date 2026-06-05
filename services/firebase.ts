@@ -1,14 +1,6 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
 import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 
-import {
-
-  connectAuthEmulator,
-  getAuth,
-  getReactNativePersistence,
-  initializeAuth,
-} from 'firebase/auth';
+import { connectAuthEmulator, getAuth } from 'firebase/auth';
 
 import {
   connectFirestoreEmulator,
@@ -61,37 +53,8 @@ function getOrCreateAuth() {
 
 
 
-  if (Platform.OS === 'web') {
-
-    globalRef[AUTH_GLOBAL_KEY] = getAuth(app);
-
-    return globalRef[AUTH_GLOBAL_KEY];
-
-  }
-
-
-
-  try {
-    globalRef[AUTH_GLOBAL_KEY] = initializeAuth(app, {
-      persistence: getReactNativePersistence(AsyncStorage),
-    });
-  } catch {
-
-    try {
-
-      globalRef[AUTH_GLOBAL_KEY] = getAuth(app);
-
-    } catch {
-
-      globalRef[AUTH_GLOBAL_KEY] = initializeAuth(app);
-
-    }
-
-  }
-
-
-
-  return globalRef[AUTH_GLOBAL_KEY]!;
+  globalRef[AUTH_GLOBAL_KEY] = getAuth(app);
+  return globalRef[AUTH_GLOBAL_KEY];
 
 }
 
