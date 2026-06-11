@@ -112,6 +112,32 @@ export function OpenStreetMapView({
     [initialCenter],
   );
 
+  const payload = useMemo(() => {
+    if (!initialCenter) return null;
+    return JSON.stringify({
+      center: userLocation
+        ? { lat: userLocation.latitude, lng: userLocation.longitude }
+        : {
+            lat: initialCenter.latitude,
+            lng: initialCenter.longitude,
+          },
+      pickup: pickup ? { lat: pickup.latitude, lng: pickup.longitude } : null,
+      destination: destination
+        ? { lat: destination.latitude, lng: destination.longitude }
+        : null,
+      driver: driverLocation
+        ? { lat: driverLocation.latitude, lng: driverLocation.longitude }
+        : null,
+    });
+  }, [destination, driverLocation, initialCenter, pickup, userLocation]);
+
+  useEffect(() => {
+    if (!webReady || !payload) return;
+    webRef.current?.injectJavaScript(
+      `window.updateRideMap && window.updateRideMap(${payload}); true;`,
+    );
+  }, [payload, webReady]);
+
   if (!mapAnchor || !initialCenter) {
     return (
       <View style={styles.loading}>
@@ -121,35 +147,12 @@ export function OpenStreetMapView({
     );
   }
 
-  const payload = useMemo(
-    () =>
-      JSON.stringify({
-        center: userLocation
-          ? { lat: userLocation.latitude, lng: userLocation.longitude }
-          : {
-              lat: initialCenter.latitude,
-              lng: initialCenter.longitude,
-            },
-        pickup: pickup ? { lat: pickup.latitude, lng: pickup.longitude } : null,
-        destination: destination
-          ? { lat: destination.latitude, lng: destination.longitude }
-          : null,
-        driver: driverLocation
-          ? { lat: driverLocation.latitude, lng: driverLocation.longitude }
-          : null,
-      }),
-    [destination, driverLocation, pickup, userLocation],
-  );
-
   const syncMarkers = () => {
+    if (!payload) return;
     webRef.current?.injectJavaScript(
       `window.updateRideMap && window.updateRideMap(${payload}); true;`,
     );
   };
-
-  useEffect(() => {
-    if (webReady) syncMarkers();
-  }, [payload, webReady]);
 
   if (loadError) {
     return (
