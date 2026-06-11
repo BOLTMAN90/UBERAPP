@@ -121,7 +121,8 @@ function getOrCreateStorage(): FirebaseStorage {
     return globalRef[STORAGE_GLOBAL_KEY];
   }
 
-  globalRef[STORAGE_GLOBAL_KEY] = getStorage(app);
+  const bucket = firebaseConfig.storageBucket?.replace(/^gs:\/\//, '').trim();
+  globalRef[STORAGE_GLOBAL_KEY] = bucket ? getStorage(app, `gs://${bucket}`) : getStorage(app);
   return globalRef[STORAGE_GLOBAL_KEY];
 }
 

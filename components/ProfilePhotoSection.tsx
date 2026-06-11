@@ -62,12 +62,13 @@ export function ProfilePhotoSection({
       return;
     }
 
-    const uri = result.assets[0].uri;
+    const asset = result.assets[0];
+    const uri = asset.uri;
     setLocalUri(uri);
     setUploading(true);
 
     try {
-      const url = await uploadProfilePhoto(userId, uri);
+      const url = await uploadProfilePhoto(userId, uri, asset.mimeType);
       onUpdated(url);
       Alert.alert('Profile updated', 'Your photo was saved.');
     } catch (error) {
