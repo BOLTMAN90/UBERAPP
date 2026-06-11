@@ -15,6 +15,7 @@ import { Platform } from 'react-native';
 
 import { firebaseConfig, useFirebaseEmulators } from '@/constants/config';
 import { getEmulatorHost } from '@/utils/emulatorHost';
+import { getPrimaryStorageBucket } from '@/utils/storageBucket';
 
 const FIRESTORE_GLOBAL_KEY = '__boltride_firestore__';
 const AUTH_GLOBAL_KEY = '__boltride_auth__';
@@ -72,8 +73,12 @@ function getOrCreateStorage(): FirebaseStorage {
     return globalRef[STORAGE_GLOBAL_KEY];
   }
 
-  const bucket = firebaseConfig.storageBucket?.replace(/^gs:\/\//, '').trim();
-  globalRef[STORAGE_GLOBAL_KEY] = bucket ? getStorage(app, `gs://${bucket}`) : getStorage(app);
+  try {
+    const bucket = getPrimaryStorageBucket();
+    globalRef[STORAGE_GLOBAL_KEY] = getStorage(app, `gs://${bucket}`);
+  } catch {
+    globalRef[STORAGE_GLOBAL_KEY] = getStorage(app);
+  }
   return globalRef[STORAGE_GLOBAL_KEY];
 }
 

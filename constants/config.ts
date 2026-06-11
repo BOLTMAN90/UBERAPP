@@ -22,6 +22,19 @@ export const demoFirebaseConfig = {
 } as const;
 
 const envApiKey = sanitizeEnvValue(process.env.EXPO_PUBLIC_FIREBASE_API_KEY);
+const envProjectId = sanitizeEnvValue(process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID);
+const envStorageBucket = sanitizeEnvValue(process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET);
+
+function resolveStorageBucket(projectId: string, bucketFromEnv: string): string {
+  const cleaned = bucketFromEnv?.replace(/^gs:\/\//, '').trim();
+  if (cleaned && !cleaned.includes('YOUR_')) {
+    return cleaned;
+  }
+  if (projectId && !projectId.includes('YOUR_')) {
+    return `${projectId}.firebasestorage.app`;
+  }
+  return '';
+}
 
 export const hasValidFirebaseConfig =
   Boolean(envApiKey) && !envApiKey.includes('YOUR_');
@@ -36,8 +49,8 @@ export const firebaseConfig = useFirebaseEmulators
     ? {
         apiKey: envApiKey,
         authDomain: sanitizeEnvValue(process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN),
-        projectId: sanitizeEnvValue(process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID),
-        storageBucket: sanitizeEnvValue(process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET),
+        projectId: envProjectId,
+        storageBucket: resolveStorageBucket(envProjectId, envStorageBucket),
         messagingSenderId: sanitizeEnvValue(
           process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
         ),
