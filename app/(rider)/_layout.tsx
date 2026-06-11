@@ -29,6 +29,7 @@ export default function RiderTabLayout() {
         name="index"
         options={{
           title: 'Ride',
+          headerShown: false,
           tabBarIcon: ({ color }) => <TabBarIcon name="map-marker" color={color} />,
         }}
       />

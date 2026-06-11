@@ -95,11 +95,31 @@ export function OpenStreetMapView({
   onDestinationChange,
 }: RideMapProps) {
   const webRef = useRef<WebView>(null);
-  const initialCenter = useRef(userLocation ?? pickup ?? destination ?? DEFAULT_MAP_CENTER);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [webReady, setWebReady] = useState(false);
 
-  const html = useMemo(() => buildOsmHtml(initialCenter.current), []);
+  const mapAnchor = userLocation ?? pickup ?? destination;
+  const [initialCenter, setInitialCenter] = useState<GeoPoint | null>(null);
+
+  useEffect(() => {
+    if (mapAnchor && !initialCenter) {
+      setInitialCenter(mapAnchor);
+    }
+  }, [mapAnchor, initialCenter]);
+
+  const html = useMemo(
+    () => buildOsmHtml(initialCenter ?? DEFAULT_MAP_CENTER),
+    [initialCenter],
+  );
+
+  if (!mapAnchor || !initialCenter) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+        <Text style={styles.loadingText}>Waiting for your location…</Text>
+      </View>
+    );
+  }
 
   const payload = useMemo(
     () =>
@@ -107,8 +127,8 @@ export function OpenStreetMapView({
         center: userLocation
           ? { lat: userLocation.latitude, lng: userLocation.longitude }
           : {
-              lat: initialCenter.current.latitude,
-              lng: initialCenter.current.longitude,
+              lat: initialCenter.latitude,
+              lng: initialCenter.longitude,
             },
         pickup: pickup ? { lat: pickup.latitude, lng: pickup.longitude } : null,
         destination: destination

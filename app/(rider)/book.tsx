@@ -21,7 +21,8 @@ export default function BookRideScreen() {
   const { user, profile } = useAuth();
   const currency = (profile?.preferredCurrency ?? 'USD') as CurrencyCode;
   const { colors } = useTheme();
-  const { location } = useCurrentLocation();
+  const { location, loading: locationLoading, usingFallback, error: locationError, retry: retryLocation } =
+    useCurrentLocation();
   const [category, setCategory] = useState<RideCategory>('economy');
   const [selectedProduct, setSelectedProduct] = useState<VehicleProduct | null>(null);
   const [productModalOpen, setProductModalOpen] = useState(false);
@@ -46,8 +47,8 @@ export default function BookRideScreen() {
   }, [category, selectedProduct]);
 
   const handleBook = async () => {
-    if (!user || !location) {
-      setError('Location required.');
+    if (!user || !location || usingFallback) {
+      setError(locationError ?? 'Live GPS is required before booking.');
       return;
     }
     const dest: GeoPoint = {
@@ -101,6 +102,17 @@ export default function BookRideScreen() {
     <ScrollView style={{ flex: 1, backgroundColor: colors.secondary }} contentContainerStyle={styles.content}>
       <Text style={[styles.title, { color: colors.text }]}>Advanced booking</Text>
       <Text style={{ color: colors.textSecondary }}>Scheduled · multi-stop · negotiable fare (inDrive style)</Text>
+
+      {locationLoading ? (
+        <Text style={{ color: colors.textSecondary }}>Getting your live location…</Text>
+      ) : usingFallback || !location ? (
+        <>
+          <Text style={{ color: colors.error }}>
+            {locationError ?? 'Live GPS is required before booking.'}
+          </Text>
+          <Button label="Retry location" variant="outline" onPress={() => void retryLocation()} />
+        </>
+      ) : null}
 
       <InputField label="Destination" value={destination} onChangeText={setDestination} />
       <PremiumVehicleSelector

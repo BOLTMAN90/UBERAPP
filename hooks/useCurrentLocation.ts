@@ -1,16 +1,22 @@
 import * as Location from 'expo-location';
 import { useCallback, useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 
-import { DEFAULT_MAP_CENTER } from '@/constants/location';
 import type { GeoPoint } from '@/types';
 
-const LOCATION_TIMEOUT_MS = 15_000;
+const LOCATION_TIMEOUT_MS = 25_000;
+const MAX_LAST_KNOWN_AGE_MS = 2 * 60 * 1000;
 
 function toGeoPoint(position: Location.LocationObject): GeoPoint {
   return {
     latitude: position.coords.latitude,
     longitude: position.coords.longitude,
   };
+}
+
+function isFreshPosition(position: Location.LocationObject): boolean {
+  const age = Date.now() - position.timestamp;
+  return age >= 0 && age <= MAX_LAST_KNOWN_AGE_MS;
 }
 
 export function useCurrentLocation() {
@@ -24,67 +30,68 @@ export function useCurrentLocation() {
     setError(null);
     setUsingFallback(false);
 
+    let hasRecentFix = false;
+
     try {
+      if (Platform.OS === 'android') {
+        await Location.enableNetworkProviderAsync().catch(() => null);
+      }
+
       const servicesOn = await Location.hasServicesEnabledAsync();
       if (!servicesOn) {
-        setLocation(DEFAULT_MAP_CENTER);
+        setLocation(null);
         setUsingFallback(true);
-        setError(
-          'Location services are off. Turn on GPS in phone settings, or set pickup on the map.',
-        );
+        setError('Turn on location (GPS) in your phone settings, then tap Retry.');
         return;
       }
 
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        setLocation(DEFAULT_MAP_CENTER);
+        setLocation(null);
         setUsingFallback(true);
-        setError(
-          'Location permission denied. Allow location for BoltRide in Settings, or set pickup on the map.',
-        );
+        setError('Allow location for BoltRide in Settings → Permissions → Location.');
         return;
       }
 
-      const lastKnown = await Location.getLastKnownPositionAsync();
-      if (lastKnown) {
+      const lastKnown = await Location.getLastKnownPositionAsync({
+        maxAge: MAX_LAST_KNOWN_AGE_MS,
+        requiredAccuracy: 500,
+      });
+
+      if (lastKnown && isFreshPosition(lastKnown)) {
         setLocation(toGeoPoint(lastKnown));
+        hasRecentFix = true;
       }
 
-      try {
-        const current = await Promise.race([
-          Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.Balanced,
-            mayShowUserSettingsDialog: true,
-          }),
-          new Promise<Location.LocationObject>((_, reject) => {
-            setTimeout(
-              () => reject(new Error('Current location is unavailable. Make sure that location services are enabled')),
-              LOCATION_TIMEOUT_MS,
-            );
-          }),
-        ]);
-        setLocation(toGeoPoint(current));
-        setUsingFallback(false);
-        setError(null);
-      } catch (positionError) {
-        if (!lastKnown) {
-          setLocation(DEFAULT_MAP_CENTER);
-          setUsingFallback(true);
-        }
-        const message =
-          positionError instanceof Error
-            ? positionError.message
-            : 'Could not get GPS fix. You can still use the map to choose pickup.';
-        setError(message);
+      const accuracy =
+        Platform.OS === 'web' ? Location.Accuracy.Balanced : Location.Accuracy.High;
+
+      const current = await Promise.race([
+        Location.getCurrentPositionAsync({
+          accuracy,
+          mayShowUserSettingsDialog: true,
+        }),
+        new Promise<Location.LocationObject>((_, reject) => {
+          setTimeout(
+            () => reject(new Error('GPS timed out. Go outside or near a window, then tap Retry.')),
+            LOCATION_TIMEOUT_MS,
+          );
+        }),
+      ]);
+
+      setLocation(toGeoPoint(current));
+      setUsingFallback(false);
+      setError(null);
+    } catch (positionError) {
+      if (!hasRecentFix) {
+        setLocation(null);
+        setUsingFallback(true);
       }
-    } catch (unexpected) {
-      setLocation(DEFAULT_MAP_CENTER);
-      setUsingFallback(true);
-      setError(
-        unexpected instanceof Error
-          ? unexpected.message
-          : 'Location unavailable. Using default map area.',
-      );
+      const message =
+        positionError instanceof Error
+          ? positionError.message
+          : 'Could not get your live location. Tap Retry.';
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -103,19 +110,21 @@ export function useCurrentLocation() {
         if (status === 'granted') {
           subscription = await Location.watchPositionAsync(
             {
-              accuracy: Location.Accuracy.Balanced,
-              distanceInterval: 30,
+              accuracy: Location.Accuracy.High,
+              distanceInterval: 15,
+              timeInterval: 5000,
             },
             (position) => {
               if (!cancelled) {
                 setLocation(toGeoPoint(position));
                 setUsingFallback(false);
+                setError(null);
               }
             },
           );
         }
       } catch {
-        // Live updates are optional; one-shot location is enough to use the app.
+        // Live updates are optional.
       }
     };
 
@@ -125,7 +134,8 @@ export function useCurrentLocation() {
       cancelled = true;
       subscription?.remove();
     };
-  }, [resolveLocation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return { location, loading, error, usingFallback, retry: resolveLocation };
 }

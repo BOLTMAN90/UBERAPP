@@ -5,6 +5,7 @@ import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { OpenStreetMapView } from '@/components/OpenStreetMapView';
 import type { MapRegion, RideMapProps } from '@/components/rideMapTypes';
 import { hasGoogleMapsApiKey, useGoogleMapsNative } from '@/constants/config';
+import { DEFAULT_MAP_CENTER } from '@/constants/location';
 import { Colors } from '@/constants/theme';
 import type { GeoPoint } from '@/types';
 import { isExpoGo } from '@/utils/expoRuntime';
@@ -14,8 +15,8 @@ export type { MapRegion, RideMapProps } from '@/components/rideMapTypes';
 const MAP_READY_TIMEOUT_MS = 6000;
 
 const defaultRegion: MapRegion = {
-  latitude: 6.5244,
-  longitude: 3.3792,
+  latitude: DEFAULT_MAP_CENTER.latitude,
+  longitude: DEFAULT_MAP_CENTER.longitude,
   latitudeDelta: 0.05,
   longitudeDelta: 0.05,
 };

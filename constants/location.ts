@@ -1,7 +1,7 @@
 import type { GeoPoint } from '@/types';
 
-/** Default map center (Lagos) when GPS is unavailable — app still works. */
+/** Neutral Nigeria map center — only used when no live GPS is available yet. */
 export const DEFAULT_MAP_CENTER: GeoPoint = {
-  latitude: 6.5244,
-  longitude: 3.3792,
+  latitude: 7.7719,
+  longitude: 4.5561,
 };

@@ -27,6 +27,7 @@ import { createRideRequest, subscribeToRide, updateRideStatus } from '@/services
 import type { CurrencyCode, GeoPoint, PaymentMethod, Ride, RideCategory } from '@/types';
 import { formatMoney } from '@/utils/currency';
 import { estimateFare, getDistanceKm } from '@/utils/geo';
+import { getLocationLabel } from '@/utils/locationLabel';
 import { estimateEtaMinutes } from '@/utils/ride';
 import { getVehicleProducts, type VehicleProduct } from '@/constants/vehicleProducts';
 import { getCategoryMeta } from '@/constants/rideOptions';
@@ -61,17 +62,31 @@ export default function RiderHomeScreen() {
   }, [category, selectedProduct]);
   const currency = (profile?.preferredCurrency ?? 'USD') as CurrencyCode;
 
-  const pickupPoint = useMemo<GeoPoint | null>(() => location, [location]);
+  const pickupPoint = useMemo<GeoPoint | null>(
+    () => (location && !usingFallback ? location : null),
+    [location, usingFallback],
+  );
 
   useEffect(() => {
-    if (location && !destinationPoint) {
+    if (!location || usingFallback) return;
+    let cancelled = false;
+    void getLocationLabel(location).then((label) => {
+      if (!cancelled) setPickupLabel(label);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [location, usingFallback]);
+
+  useEffect(() => {
+    if (location && !usingFallback && !destinationPoint) {
       setDestinationPoint({
         latitude: location.latitude + 0.01,
         longitude: location.longitude + 0.01,
       });
       setDestinationLabel('Pinned destination');
     }
-  }, [location, destinationPoint]);
+  }, [location, usingFallback, destinationPoint]);
 
   const fareEstimate = useMemo(() => {
     if (!pickupPoint || !destinationPoint) return null;
@@ -106,6 +121,10 @@ export default function RiderHomeScreen() {
   }, [activeRide?.driverId]);
 
   const handleRequestRide = async () => {
+    if (usingFallback || !location) {
+      setError('Live GPS is required before booking. Tap Retry location.');
+      return;
+    }
     if (!user || !pickupPoint || !destinationPoint || !fareEstimate) {
       setError('Set pickup and destination before requesting.');
       return;
@@ -181,7 +200,7 @@ export default function RiderHomeScreen() {
   };
 
   const isSearching = activeRide && ['searching', 'requested', 'negotiating'].includes(activeRide.status);
-  const mapCenter = pickupPoint ?? location;
+  const mapCenter = pickupPoint;
 
   const welcomeName = profile?.displayName ?? user?.displayName ?? null;
   const welcomePhoto = profile?.photoURL ?? user?.photoURL ?? null;
@@ -199,7 +218,7 @@ export default function RiderHomeScreen() {
         <WelcomeBanner
           name={welcomeName}
           photoURL={welcomePhoto}
-          topInset={insets.top + Spacing.xs}
+          topInset={insets.top + Spacing.sm}
         />
       ) : null}
       <View style={styles.mapArea}>
@@ -208,25 +227,37 @@ export default function RiderHomeScreen() {
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={{ color: colors.textSecondary, marginTop: Spacing.sm }}>Getting your location…</Text>
           </View>
+        ) : usingFallback || !mapCenter ? (
+          <View style={[styles.mapLoading, { backgroundColor: colors.surface, padding: Spacing.lg }]}>
+            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16, textAlign: 'center' }}>
+              Live location needed
+            </Text>
+            <Text style={{ color: colors.textSecondary, marginTop: Spacing.sm, textAlign: 'center' }}>
+              {locationError ?? 'Enable GPS and allow location permission for BoltRide.'}
+            </Text>
+            <View style={{ marginTop: Spacing.md, width: '100%' }}>
+              <Button label="Retry location" onPress={() => void retryLocation()} />
+            </View>
+          </View>
         ) : (
-        <RideMap
-          userLocation={mapCenter}
-          driverLocation={driverLocation}
-          pickup={pickupPoint}
-          destination={destinationPoint}
-          onDestinationChange={(point) => {
-            if (!activeRide) {
-              setDestinationPoint(point);
-              setDestinationLabel('Pinned destination');
-            }
-          }}
-          onRegionChange={(region: MapRegion) => {
-            if (!activeRide) {
-              setDestinationPoint({ latitude: region.latitude, longitude: region.longitude });
-              setDestinationLabel('Pinned destination');
-            }
-          }}
-        />
+          <RideMap
+            userLocation={mapCenter}
+            driverLocation={driverLocation}
+            pickup={pickupPoint}
+            destination={destinationPoint}
+            onDestinationChange={(point) => {
+              if (!activeRide) {
+                setDestinationPoint(point);
+                setDestinationLabel('Pinned destination');
+              }
+            }}
+            onRegionChange={(region: MapRegion) => {
+              if (!activeRide) {
+                setDestinationPoint({ latitude: region.latitude, longitude: region.longitude });
+                setDestinationLabel('Pinned destination');
+              }
+            }}
+          />
         )}
       </View>
 
@@ -310,12 +341,9 @@ export default function RiderHomeScreen() {
               <Text style={{ color: colors.textSecondary }}>Pan map to set destination.</Text>
             )}
             {locationError ? (
-              <Text style={{ color: colors.error, fontSize: 13 }}>
-                {locationError}
-                {usingFallback ? ' Tap the map to move the destination pin.' : ''}
-              </Text>
+              <Text style={{ color: colors.error, fontSize: 13 }}>{locationError}</Text>
             ) : null}
-            {locationError && !usingFallback ? (
+            {locationError ? (
               <Button label="Retry location" variant="outline" onPress={() => void retryLocation()} />
             ) : null}
             {error ? <Text style={{ color: colors.error }}>{error}</Text> : null}
