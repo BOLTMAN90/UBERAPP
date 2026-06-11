@@ -1,14 +1,13 @@
 import { updateProfile } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
-import { auth, db, storage } from '@/services/firebase';
-import { base64ToUint8Array, guessImageContentType, readImageBase64 } from '@/utils/imageUpload';
+import { auth, db } from '@/services/firebase';
+import { uploadFileToFirebaseStorage } from '@/services/storageUpload';
+import { prepareAvatarForUpload } from '@/utils/imageUpload';
 import { runFirestoreWithRetry } from '@/utils/firestoreRetry';
 
-function storagePathForUser(userId: string, contentType: string): string {
-  const ext = contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg';
-  return `avatars/${userId}/profile.${ext}`;
+function storagePathForUser(userId: string): string {
+  return `avatars/${userId}/profile.jpg`;
 }
 
 function friendlyStorageError(error: unknown): string {
@@ -21,15 +20,6 @@ function friendlyStorageError(error: unknown): string {
   }
   if (code === 'storage/unauthenticated') {
     return 'Session expired. Sign in again, then retry your upload.';
-  }
-  if (code === 'storage/quota-exceeded') {
-    return 'Storage quota exceeded. Contact support or try a smaller image.';
-  }
-  if (code === 'storage/unknown') {
-    return 'Upload failed. Check your internet connection and that Firebase Storage is enabled for this project.';
-  }
-  if (error instanceof Error && error.message.includes('ArrayBuffer')) {
-    return 'Upload failed on this device. Try a smaller photo or choose from gallery again.';
   }
   if (error instanceof Error && error.message) {
     return error.message;
@@ -50,22 +40,25 @@ export async function uploadProfilePhoto(
     throw new Error('You can only update your own profile photo.');
   }
 
-  const contentType = mimeType?.startsWith('image/') ? mimeType : guessImageContentType(localUri);
-  const base64 = await readImageBase64(localUri);
-  if (!base64) {
-    throw new Error('Could not read the selected image.');
+  let fileUri: string;
+  let contentType: string;
+  try {
+    const prepared = await prepareAvatarForUpload(localUri);
+    fileUri = prepared.fileUri;
+    contentType = mimeType?.startsWith('image/') ? mimeType : prepared.contentType;
+  } catch {
+    throw new Error('Could not prepare the selected image. Try another photo.');
   }
 
-  const storageRef = ref(storage, storagePathForUser(userId, contentType));
+  const storagePath = storagePathForUser(userId);
+  const idToken = await auth.currentUser.getIdToken();
 
+  let downloadUrl: string;
   try {
-    const bytes = base64ToUint8Array(base64);
-    await uploadBytes(storageRef, bytes, { contentType });
+    downloadUrl = await uploadFileToFirebaseStorage(fileUri, storagePath, contentType, idToken);
   } catch (error) {
     throw new Error(friendlyStorageError(error));
   }
-
-  const downloadUrl = await getDownloadURL(storageRef);
 
   await updateProfile(auth.currentUser, { photoURL: downloadUrl });
 

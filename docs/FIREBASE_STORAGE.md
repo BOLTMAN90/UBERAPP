@@ -2,7 +2,7 @@
 
 ## App fix
 
-Uploads use `expo-file-system` + Firebase `uploadString` (base64). The old `fetch(uri).blob()` approach fails on Android and caused `storage/unknown`.
+Uploads use **Firebase Storage REST API** + `expo-file-system` `uploadAsync` (native file upload). The Firebase JS SDK `uploadBytes` / `Blob` path fails on React Native with ArrayBuffer errors.
 
 ## One-time Firebase Console setup
 

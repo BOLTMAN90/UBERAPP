@@ -1,19 +1,30 @@
 import * as FileSystem from 'expo-file-system/legacy';
+import * as ImageManipulator from 'expo-image-manipulator';
 
-/** Read a local camera/gallery URI into base64 (works on Android content:// and file:// URIs). */
-export async function readImageBase64(localUri: string): Promise<string> {
-  const normalized = localUri.split('?')[0] ?? localUri;
-  return FileSystem.readAsStringAsync(localUri, {
-    encoding: FileSystem.EncodingType.Base64,
-  }).catch(async () => {
-    // Some Android pickers return URIs that need copying to cache first.
-    const ext = guessExtension(normalized);
-    const cacheUri = `${FileSystem.cacheDirectory}upload-${Date.now()}.${ext}`;
-    await FileSystem.copyAsync({ from: localUri, to: cacheUri });
-    return FileSystem.readAsStringAsync(cacheUri, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
-  });
+/** Resize/compress avatar and return a stable file:// URI for upload. */
+export async function prepareAvatarForUpload(localUri: string): Promise<{
+  fileUri: string;
+  contentType: string;
+}> {
+  const manipulated = await ImageManipulator.manipulateAsync(
+    localUri,
+    [{ resize: { width: 800 } }],
+    { compress: 0.82, format: ImageManipulator.SaveFormat.JPEG },
+  );
+
+  const fileUri = await ensureLocalFileUri(manipulated.uri);
+  return { fileUri, contentType: 'image/jpeg' };
+}
+
+/** Copy content:// or other URIs to a cache file:// path the uploader can read. */
+export async function ensureLocalFileUri(localUri: string): Promise<string> {
+  if (localUri.startsWith('file://')) {
+    return localUri;
+  }
+
+  const cacheUri = `${FileSystem.cacheDirectory}avatar-${Date.now()}.jpg`;
+  await FileSystem.copyAsync({ from: localUri, to: cacheUri });
+  return cacheUri;
 }
 
 export function guessImageContentType(uri: string): string {
@@ -22,25 +33,4 @@ export function guessImageContentType(uri: string): string {
   if (lower.includes('.webp')) return 'image/webp';
   if (lower.includes('.heic') || lower.includes('.heif')) return 'image/heic';
   return 'image/jpeg';
-}
-
-function guessExtension(uri: string): string {
-  const type = guessImageContentType(uri);
-  if (type === 'image/png') return 'png';
-  if (type === 'image/webp') return 'webp';
-  return 'jpg';
-}
-
-/** Decode base64 to bytes without Blob (React Native Blob lacks ArrayBuffer support). */
-export function base64ToUint8Array(base64: string): Uint8Array {
-  const clean = base64.replace(/^data:image\/[\w+.-]+;base64,/, '').replace(/\s/g, '');
-  if (typeof globalThis.atob !== 'function') {
-    throw new Error('Base64 decoding is not supported on this device.');
-  }
-  const binary = globalThis.atob(clean);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
 }
