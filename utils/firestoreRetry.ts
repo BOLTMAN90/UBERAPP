@@ -1,6 +1,6 @@
 import { isFirebaseOfflineError, isFirebasePermissionError } from '@/utils/firebaseErrors';
 
-const MAX_ATTEMPTS = 5;
+const MAX_ATTEMPTS = 6;
 
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -22,7 +22,7 @@ export async function runFirestoreWithRetry<T>(operation: () => Promise<T>): Pro
       if (!retryable || attempt === MAX_ATTEMPTS - 1) {
         throw error;
       }
-      await wait(600 * (attempt + 1));
+      await wait(1000 * (attempt + 1));
     }
   }
 

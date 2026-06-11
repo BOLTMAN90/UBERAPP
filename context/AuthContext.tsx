@@ -6,6 +6,7 @@ import { auth } from '@/services/firebase';
 import { registerForPushNotifications } from '@/services/notifications';
 import type { AppUser } from '@/types';
 import { isFirebaseOfflineError } from '@/utils/firebaseErrors';
+import { waitForInternet } from '@/utils/network';
 
 function profileFromAuthUser(nextUser: User, nextProfile: AppUser | null): AppUser {
   if (nextProfile) {
@@ -63,6 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (nextUser) {
         try {
+          await waitForInternet();
           const nextProfile = await getUserProfile(nextUser.uid);
           setProfile(profileFromAuthUser(nextUser, nextProfile));
 

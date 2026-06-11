@@ -10,7 +10,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import * as Updates from 'expo-updates';
 import { useEffect } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { LogBox, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-reanimated';
 
@@ -18,6 +18,11 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { Colors } from '@/constants/theme';
 import { AuthProvider } from '@/context/AuthContext';
 import { ThemeProvider } from '@/context/ThemeContext';
+
+LogBox.ignoreLogs([
+  'Could not reach Cloud Firestore backend',
+  '@firebase/firestore: Firestore',
+]);
 
 export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   return (
