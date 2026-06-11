@@ -11,12 +11,14 @@
     "preview": {
       "distribution": "internal",
       "environment": "preview",
+      "channel": "preview",
       "android": {
         "buildType": "apk"
       }
     },
     "production": {
       "environment": "production",
+      "channel": "production",
       "android": {
         "buildType": "apk"
       }
@@ -24,5 +26,13 @@
   },
   "submit": {
     "production": {}
+  },
+  "update": {
+    "preview": {
+      "channel": "preview"
+    },
+    "production": {
+      "channel": "production"
+    }
   }
 }

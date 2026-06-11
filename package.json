@@ -24,7 +24,9 @@
     "seed": "node scripts/seed-emulators.mjs",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "maps:setup": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/maps-setup.ps1"
+    "maps:setup": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/maps-setup.ps1",
+    "update:preview": "eas update --channel preview --environment preview --non-interactive",
+    "update:production": "eas update --channel production --environment production --non-interactive"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -41,6 +43,7 @@
     "expo-router": "~55.0.16",
     "expo-splash-screen": "~55.0.21",
     "expo-status-bar": "~55.0.6",
+    "expo-updates": "~55.0.24",
     "expo-web-browser": "~55.0.16",
     "firebase": "^12.13.0",
     "react": "19.2.0",

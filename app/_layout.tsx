@@ -8,6 +8,7 @@ import { useFonts } from 'expo-font';
 import { Stack, type ErrorBoundaryProps } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import * as Updates from 'expo-updates';
 import { useEffect } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -84,6 +85,22 @@ export default function RootLayout() {
       void SplashScreen.hideAsync().catch(() => null);
     }
   }, [loaded, error]);
+
+  useEffect(() => {
+    if (__DEV__ || !Updates.isEnabled) return;
+
+    void (async () => {
+      try {
+        const result = await Updates.checkForUpdateAsync();
+        if (result.isAvailable) {
+          await Updates.fetchUpdateAsync();
+          await Updates.reloadAsync();
+        }
+      } catch {
+        // Offline or update server unreachable — keep running the embedded bundle.
+      }
+    })();
+  }, []);
 
   if (!loaded && !error) {
     return null;
