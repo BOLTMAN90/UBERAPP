@@ -1,9 +1,9 @@
 import { updateProfile } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { getDownloadURL, ref, uploadString } from 'firebase/storage';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 import { auth, db, storage } from '@/services/firebase';
-import { guessImageContentType, readImageBase64 } from '@/utils/imageUpload';
+import { base64ToUint8Array, guessImageContentType, readImageBase64 } from '@/utils/imageUpload';
 import { runFirestoreWithRetry } from '@/utils/firestoreRetry';
 
 function storagePathForUser(userId: string, contentType: string): string {
@@ -27,6 +27,9 @@ function friendlyStorageError(error: unknown): string {
   }
   if (code === 'storage/unknown') {
     return 'Upload failed. Check your internet connection and that Firebase Storage is enabled for this project.';
+  }
+  if (error instanceof Error && error.message.includes('ArrayBuffer')) {
+    return 'Upload failed on this device. Try a smaller photo or choose from gallery again.';
   }
   if (error instanceof Error && error.message) {
     return error.message;
@@ -56,7 +59,8 @@ export async function uploadProfilePhoto(
   const storageRef = ref(storage, storagePathForUser(userId, contentType));
 
   try {
-    await uploadString(storageRef, base64, 'base64', { contentType });
+    const bytes = base64ToUint8Array(base64);
+    await uploadBytes(storageRef, bytes, { contentType });
   } catch (error) {
     throw new Error(friendlyStorageError(error));
   }

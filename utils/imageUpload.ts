@@ -30,3 +30,17 @@ function guessExtension(uri: string): string {
   if (type === 'image/webp') return 'webp';
   return 'jpg';
 }
+
+/** Decode base64 to bytes without Blob (React Native Blob lacks ArrayBuffer support). */
+export function base64ToUint8Array(base64: string): Uint8Array {
+  const clean = base64.replace(/^data:image\/[\w+.-]+;base64,/, '').replace(/\s/g, '');
+  if (typeof globalThis.atob !== 'function') {
+    throw new Error('Base64 decoding is not supported on this device.');
+  }
+  const binary = globalThis.atob(clean);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
