@@ -203,7 +203,8 @@ export default function RiderHomeScreen() {
   const mapCenter = pickupPoint;
 
   const welcomeName = profile?.displayName ?? user?.displayName ?? null;
-  const welcomePhoto = profile?.photoURL ?? user?.photoURL ?? null;
+  const welcomePhoto =
+    profile?.avatarDataUrl ?? profile?.photoURL ?? user?.photoURL ?? null;
 
   return (
     <View style={styles.screen}>

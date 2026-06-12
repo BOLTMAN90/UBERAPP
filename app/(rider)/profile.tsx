@@ -63,7 +63,9 @@ export default function RiderProfileScreen() {
 
   const [driverStats, setDriverStats] = useState<DriverProfile | null>(null);
 
-  const [photoURL, setPhotoURL] = useState<string | undefined>(profile?.photoURL);
+  const [photoURL, setPhotoURL] = useState<string | undefined>(
+    profile?.avatarDataUrl ?? profile?.photoURL,
+  );
 
 
 
@@ -79,9 +81,9 @@ export default function RiderProfileScreen() {
 
   useEffect(() => {
 
-    setPhotoURL(profile?.photoURL);
+    setPhotoURL(profile?.avatarDataUrl ?? profile?.photoURL);
 
-  }, [profile?.photoURL]);
+  }, [profile?.avatarDataUrl, profile?.photoURL]);
 
 
 

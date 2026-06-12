@@ -54,6 +54,8 @@ export interface AppUser {
   phone?: string;
   role: UserRole;
   photoURL?: string;
+  /** Used when Firebase Storage is not enabled; data:image/jpeg;base64,... */
+  avatarDataUrl?: string;
   createdAt: number;
   walletBalance?: number;
   walletBalances?: WalletBalances;
@@ -69,6 +71,7 @@ export interface DriverProfile {
   uid: string;
   displayName: string;
   photoURL?: string;
+  avatarDataUrl?: string;
   isOnline: boolean;
   autoAcceptRides?: boolean;
   rating?: number;

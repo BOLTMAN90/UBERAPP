@@ -54,7 +54,9 @@ export default function DriverProfileScreen() {
 
   const [driver, setDriver] = useState<DriverProfile | null>(null);
 
-  const [photoURL, setPhotoURL] = useState<string | undefined>(authProfile?.photoURL);
+  const [photoURL, setPhotoURL] = useState<string | undefined>(
+    authProfile?.avatarDataUrl ?? authProfile?.photoURL,
+  );
 
 
 
@@ -72,9 +74,14 @@ export default function DriverProfileScreen() {
 
   useEffect(() => {
 
-    setPhotoURL(authProfile?.photoURL ?? driver?.photoURL);
+    setPhotoURL(
+      authProfile?.avatarDataUrl ??
+        authProfile?.photoURL ??
+        driver?.avatarDataUrl ??
+        driver?.photoURL,
+    );
 
-  }, [authProfile?.photoURL, driver?.photoURL]);
+  }, [authProfile?.avatarDataUrl, authProfile?.photoURL, driver?.avatarDataUrl, driver?.photoURL]);
 
 
 

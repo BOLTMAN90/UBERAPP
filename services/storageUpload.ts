@@ -40,7 +40,7 @@ async function attemptUpload(
   localFileUri: string,
   storagePath: string,
   contentType: string,
-  idToken: string,
+  authorization: string,
 ): Promise<UploadAttempt> {
   const uploadUrl = buildUploadUrl(bucket, storagePath);
 
@@ -48,7 +48,7 @@ async function attemptUpload(
     httpMethod: 'POST',
     uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
     headers: {
-      Authorization: `Firebase ${idToken}`,
+      Authorization: authorization,
       'Content-Type': contentType,
     },
   });
@@ -81,28 +81,35 @@ export async function uploadFileToFirebaseStorage(
 
   let lastBody = '';
   let lastStatus = 0;
+  const authHeaders = [`Firebase ${idToken}`, `Bearer ${idToken}`];
 
-  for (const bucket of buckets) {
-    const attempt = await attemptUpload(
-      bucket,
-      localFileUri,
-      storagePath,
-      contentType,
-      idToken,
-    );
+  for (const authorization of authHeaders) {
+    for (const bucket of buckets) {
+      const attempt = await attemptUpload(
+        bucket,
+        localFileUri,
+        storagePath,
+        contentType,
+        authorization,
+      );
 
-    if (attempt.metadata) {
-      return buildDownloadUrl(attempt.metadata);
+      if (attempt.metadata) {
+        return buildDownloadUrl(attempt.metadata);
+      }
+
+      lastStatus = attempt.status;
+      lastBody = attempt.body;
+
+      if (attempt.status === 401 || attempt.status === 403) {
+        throw new Error('Storage denied the upload. Sign in again or deploy storage rules.');
+      }
+
+      if (attempt.status !== 404) {
+        break;
+      }
     }
 
-    lastStatus = attempt.status;
-    lastBody = attempt.body;
-
-    if (attempt.status === 401 || attempt.status === 403) {
-      throw new Error('Storage denied the upload. Sign in again or deploy storage rules.');
-    }
-
-    if (attempt.status !== 404) {
+    if (lastStatus !== 404) {
       break;
     }
   }

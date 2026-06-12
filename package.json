@@ -5,7 +5,8 @@
   "scripts": {
     "clean:cache": "node scripts/clean-metro-cache.mjs",
     "firebase:login": "firebase login",
-    "firebase:deploy:rules": "firebase deploy --only firestore:rules,storage:rules --project bolexuber",
+    "firebase:deploy:rules": "firebase deploy --only firestore:rules,storage --project bolexuber",
+    "storage:check": "node scripts/check-storage.mjs",
     "start": "node scripts/expo-start-lan.mjs",
     "start:clean": "node scripts/kill-metro-ports.mjs && node scripts/expo-start-lan.mjs -c",
     "dev": "node scripts/expo-start-lan.mjs",

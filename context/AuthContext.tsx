@@ -13,7 +13,9 @@ function profileFromAuthUser(nextUser: User, nextProfile: AppUser | null): AppUs
     return {
       ...nextProfile,
       displayName: nextProfile.displayName || nextUser.displayName || 'User',
-      photoURL: nextProfile.photoURL ?? nextUser.photoURL ?? undefined,
+      photoURL:
+        nextProfile.avatarDataUrl ?? nextProfile.photoURL ?? nextUser.photoURL ?? undefined,
+      avatarDataUrl: nextProfile.avatarDataUrl,
     };
   }
   return {

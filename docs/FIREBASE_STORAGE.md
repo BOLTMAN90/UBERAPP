@@ -1,38 +1,54 @@
 # Profile photo uploads (Firebase Storage)
 
-## App fix
+## Important: Storage is not enabled yet on bolexuber
 
-Uploads use **Firebase Storage REST API** + `expo-file-system` `uploadAsync` (native file upload). The Firebase JS SDK `uploadBytes` / `Blob` path fails on React Native with ArrayBuffer errors.
+Running `npm run storage:check` shows both bucket names return **404**:
 
-## One-time Firebase Console setup
+- `bolexuber.firebasestorage.app` — NOT FOUND
+- `bolexuber.appspot.com` — NOT FOUND
 
-1. Open [Firebase Console](https://console.firebase.google.com/) → project **bolexuber** → **Storage** → **Get started** (if not enabled).
-2. Copy the bucket name from the Storage page (new projects use **`bolexuber.firebasestorage.app`**, not `.appspot.com`).
-3. Set `EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET` in root `.env` and EAS preview env to **exactly** that value (no `gs://` prefix):
+That means **Firebase Storage has not been created** in your Firebase project. No app code can fix this alone.
+
+### Avatar uploads still work (Firestore fallback)
+
+The app automatically saves your photo to **Firestore** when Storage is missing. Reload Expo Go and try uploading again — it should work.
+
+---
+
+## Enable Firebase Storage (recommended for production)
+
+1. Open [Firebase Console → bolexuber → Storage](https://console.firebase.google.com/project/bolexuber/storage)
+2. Click **Get started**
+3. Choose a region (e.g. `europe-west1` or `us-central1`)
+4. New projects may require the **Blaze (pay-as-you-go)** plan — Firebase Storage has a free tier
+5. Copy the bucket name shown (usually `bolexuber.firebasestorage.app`)
+6. Update `.env`:
 
 ```env
 EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=bolexuber.firebasestorage.app
 ```
 
-4. Push env to Expo and restart the dev server:
+7. Push env and deploy rules:
 
 ```powershell
 eas.cmd env:push --environment preview
-```
-
-If you skip step 3, the app tries both `firebasestorage.app` and `appspot.com` automatically. A **404** still means Storage is not enabled yet — complete step 1.
-
-5. Deploy storage rules from this repo:
-
-```powershell
 npm.cmd run firebase:login
 npm.cmd run firebase:deploy:rules
+npm.cmd run storage:check
 ```
 
-Rules allow each signed-in user to write only their own `avatars/{userId}/` folder (max 5 MB, images only).
+When `storage:check` shows **EXISTS** instead of **NOT FOUND**, new uploads go to Cloud Storage automatically.
+
+---
+
+## How uploads work in the app
+
+1. Try **Firebase Storage REST** upload (native file upload, no Blob)
+2. If bucket is missing (404), save compressed image to **Firestore** `avatarDataUrl`
+3. Profile screens show `avatarDataUrl` or `photoURL`
 
 ## If upload still fails
 
-- Sign out and sign in again (refreshes auth token).
-- Confirm internet on the phone.
-- In Firebase Console → Storage → Rules, verify the rules match `storage.rules` in this repo.
+- Sign out and sign in again
+- Confirm phone has internet
+- Try a smaller / cropped photo

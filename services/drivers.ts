@@ -54,7 +54,8 @@ export async function getDriverProfile(uid: string): Promise<DriverProfile | nul
   return {
     uid,
     displayName: data.displayName,
-    photoURL: data.photoURL,
+    photoURL: data.avatarDataUrl ?? data.photoURL,
+    avatarDataUrl: data.avatarDataUrl,
     isOnline: data.isOnline ?? false,
     autoAcceptRides: data.autoAcceptRides ?? false,
     rating: data.rating ?? 5,
